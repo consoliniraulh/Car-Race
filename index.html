@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-    <title>Minijuego de Carreras Móvil</title>
+    <title>Minijuego de Carreras con Perspectiva</title>
     <style>
         body {
             display: flex;
@@ -100,14 +100,96 @@
         const player = { x: canvas.width / 2, y: canvas.height - 60, width: 30, height: 50, speed: 4 };
         let score = 0, gameOver = false, gameStarted = false, obstacles = [], collectibles = [], roadLines = [], frameCount = 0;
         const roadSpeed = 3;
+        const horizonY = canvas.height * 0.75; // Horizonte a 3/4 de la pantalla
+        const vanishPointX = canvas.width / 2; // Punto de fuga en el centro horizontal
 
-        class Obstacle { constructor() { this.width = 30; this.height = 30; this.x = Math.random() * (canvas.width - this.width); this.y = -this.height; this.speed = roadSpeed; } update() { this.y += this.speed; } draw() { ctx.fillStyle = 'red'; ctx.fillRect(this.x, this.y, this.width, this.height); } }
-        class Collectible { constructor() { this.width = 20; this.height = 20; this.x = Math.random() * (canvas.width - this.width); this.y = -this.height; this.speed = roadSpeed; } update() { this.y += this.speed; } draw() { ctx.fillStyle = 'yellow'; ctx.beginPath(); ctx.arc(this.x + this.width / 2, this.y + this.height / 2, this.width / 2, 0, Math.PI * 2); ctx.fill(); } }
-        class RoadLine { constructor(y) { this.x = canvas.width / 2; this.y = y; this.width = 8; this.height = 40; this.speed = roadSpeed; } update() { this.y += this.speed; if (this.y > canvas.height) this.y = -this.height; } draw() { ctx.fillStyle = 'white'; ctx.fillRect(this.x - this.width / 2, this.y, this.width, this.height); } }
+        // Clase RoadLine con perspectiva
+        class RoadLine {
+            constructor(y) {
+                this.baseY = y; // Posición inicial relativa al horizonte
+                this.width = 8;
+                this.height = 40;
+                this.speed = roadSpeed;
+                this.updatePosition(); // Calcula x e y iniciales
+            }
+            updatePosition() {
+                const distanceFromHorizon = this.baseY - horizonY;
+                const scale = Math.max(0.1, 1 - distanceFromHorizon / (canvas.height - horizonY)); // Escala hacia el punto de fuga
+                this.x = vanishPointX - (this.width / 2) * scale;
+                this.y = this.baseY + distanceFromHorizon * scale;
+                this.height = 40 * scale;
+            }
+            update() {
+                this.baseY += this.speed;
+                if (this.baseY > canvas.height) this.baseY = horizonY - (canvas.height - this.baseY); // Reinicia desde el horizonte
+                this.updatePosition();
+            }
+            draw() {
+                ctx.fillStyle = 'white';
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+            }
+        }
 
-        for (let i = 0; i < 8; i++) roadLines.push(new RoadLine(i * (canvas.height / 8)));
+        // Clase Obstacle con perspectiva
+        class Obstacle {
+            constructor() {
+                this.baseWidth = 30;
+                this.baseHeight = 30;
+                this.x = Math.random() * (canvas.width - this.baseWidth);
+                this.baseY = horizonY - 100; // Empiezan cerca del horizonte
+                this.speed = roadSpeed;
+                this.updatePosition();
+            }
+            updatePosition() {
+                const distanceFromHorizon = this.baseY - horizonY;
+                const scale = Math.max(0.1, 1 - distanceFromHorizon / (canvas.height - horizonY));
+                this.width = this.baseWidth * scale;
+                this.height = this.baseHeight * scale;
+                this.y = this.baseY + distanceFromHorizon * scale;
+            }
+            update() {
+                this.baseY += this.speed;
+                this.updatePosition();
+                if (this.y > canvas.height) this.baseY = horizonY - 100; // Reinicia
+            }
+            draw() {
+                ctx.fillStyle = 'red';
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+            }
+        }
 
-        // Controles con botones virtuales
+        // Clase Collectible con perspectiva
+        class Collectible {
+            constructor() {
+                this.baseWidth = 20;
+                this.baseHeight = 20;
+                this.x = Math.random() * (canvas.width - this.baseWidth);
+                this.baseY = horizonY - 100;
+                this.speed = roadSpeed;
+                this.updatePosition();
+            }
+            updatePosition() {
+                const distanceFromHorizon = this.baseY - horizonY;
+                const scale = Math.max(0.1, 1 - distanceFromHorizon / (canvas.height - horizonY));
+                this.width = this.baseWidth * scale;
+                this.height = this.baseHeight * scale;
+                this.y = this.baseY + distanceFromHorizon * scale;
+            }
+            update() {
+                this.baseY += this.speed;
+                this.updatePosition();
+                if (this.y > canvas.height) this.baseY = horizonY - 100;
+            }
+            draw() {
+                ctx.fillStyle = 'yellow';
+                ctx.beginPath();
+                ctx.arc(this.x + this.width / 2, this.y + this.height / 2, this.width / 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        for (let i = 0; i < 8; i++) roadLines.push(new RoadLine(horizonY + i * 50)); // Inicia las líneas debajo del horizonte
+
         let moveInterval = null;
 
         function startMoving(direction) {
@@ -137,7 +219,6 @@
         rightButton.addEventListener('touchend', (e) => { e.preventDefault(); stopMoving(); });
         rightButton.addEventListener('touchcancel', (e) => { e.preventDefault(); stopMoving(); });
 
-        // Controles táctiles como respaldo
         let touchStartX = 0;
         canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
@@ -164,7 +245,6 @@
             }
         });
 
-        // Keydown para desktop
         if (!('ontouchstart' in window)) {
             document.addEventListener('keydown', (e) => {
                 if (!gameOver && gameStarted) {
@@ -199,14 +279,54 @@
                 return;
             }
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = 'gray'; ctx.beginPath(); ctx.moveTo(0, canvas.height); ctx.lineTo(canvas.width, canvas.height); ctx.lineTo(canvas.width * 0.75, 0); ctx.lineTo(canvas.width * 0.25, 0); ctx.closePath(); ctx.fill();
+
+            // Dibujar carretera con perspectiva
+            ctx.fillStyle = 'gray';
+            ctx.beginPath();
+            ctx.moveTo(0, horizonY);
+            ctx.lineTo(canvas.width, horizonY);
+            ctx.lineTo(canvas.width * 0.75, canvas.height);
+            ctx.lineTo(canvas.width * 0.25, canvas.height);
+            ctx.closePath();
+            ctx.fill();
+
+            // Dibujar horizonte
+            ctx.strokeStyle = 'white';
+            ctx.beginPath();
+            ctx.moveTo(0, horizonY);
+            ctx.lineTo(canvas.width, horizonY);
+            ctx.stroke();
+
             roadLines.forEach(line => { line.update(); line.draw(); });
-            if (frameCount % 100 === 0) { if (Math.random() < 0.5) obstacles.push(new Obstacle()); if (Math.random() < 0.2) collectibles.push(new Collectible()); }
-            obstacles.forEach((obstacle, index) => { obstacle.update(); obstacle.draw(); if (checkCollision(player, obstacle)) { gameOver = true; collisionSound.play().catch(e => {}); } if (obstacle.y > canvas.height) obstacles.splice(index, 1); });
-            collectibles.forEach((collectible, index) => { collectible.update(); collectible.draw(); if (checkCollision(player, collectible)) { score += 50; collectSound.play().catch(e => {}); collectibles.splice(index, 1); } if (collectible.y > canvas.height) collectibles.splice(index, 1); });
-            ctx.fillStyle = 'blue'; ctx.fillRect(player.x, player.y, player.width, player.height);
-            score += 0.1; scoreDisplay.textContent = `Puntaje: ${Math.floor(score)}`;
-            frameCount++; requestAnimationFrame(gameLoop);
+            if (frameCount % 100 === 0) {
+                if (Math.random() < 0.5) obstacles.push(new Obstacle());
+                if (Math.random() < 0.2) collectibles.push(new Collectible());
+            }
+            obstacles.forEach((obstacle, index) => {
+                obstacle.update();
+                obstacle.draw();
+                if (checkCollision(player, obstacle)) {
+                    gameOver = true;
+                    collisionSound.play().catch(e => {});
+                }
+                if (obstacle.y > canvas.height) obstacles.splice(index, 1);
+            });
+            collectibles.forEach((collectible, index) => {
+                collectible.update();
+                collectible.draw();
+                if (checkCollision(player, collectible)) {
+                    score += 50;
+                    collectSound.play().catch(e => {});
+                    collectibles.splice(index, 1);
+                }
+                if (collectible.y > canvas.height) collectibles.splice(index, 1);
+            });
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+            score += 0.1;
+            scoreDisplay.textContent = `Puntaje: ${Math.floor(score)}`;
+            frameCount++;
+            requestAnimationFrame(gameLoop);
         }
     </script>
 </body>
