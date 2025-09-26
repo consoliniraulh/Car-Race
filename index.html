@@ -197,19 +197,29 @@
 
         // Cargar sprites
         const playerImg = new Image();
-        playerImg.src = 'car.png'; // Imagen en la raíz
+        playerImg.src = 'car.png';
         playerImg.onload = () => console.log('Sprite del auto cargado');
         playerImg.onerror = () => console.log('Error cargando car.png, usando fallback');
 
         const obstacleImg = new Image();
-        obstacleImg.src = 'obstacle.png'; // Asegúrate de tener esta imagen
+        obstacleImg.src = 'obstacle.png';
         obstacleImg.onload = () => console.log('Sprite del obstáculo cargado');
         obstacleImg.onerror = () => console.log('Error cargando obstacle.png');
 
         const collectibleImg = new Image();
-        collectibleImg.src = 'collectible.png'; // Asegúrate de tener esta imagen
+        collectibleImg.src = 'collectible.png';
         collectibleImg.onload = () => console.log('Sprite del coleccionable cargado');
         collectibleImg.onerror = () => console.log('Error cargando collectible.png');
+
+        const rockImg = new Image();
+        rockImg.src = 'rock.png';
+        rockImg.onload = () => console.log('Sprite de la piedra cargado');
+        rockImg.onerror = () => console.log('Error cargando rock.png');
+
+        const treeImg = new Image();
+        treeImg.src = 'tree.png';
+        treeImg.onload = () => console.log('Sprite del árbol cargado');
+        treeImg.onerror = () => console.log('Error cargando tree.png');
 
         [collisionSound, collectSound, backgroundMusic].forEach(audio => {
             audio.onerror = () => console.log(`Error cargando ${audio.id}`);
@@ -241,7 +251,7 @@
                 ctx.arc(cloudX + i * 150 - frameCount * 0.1, 50, 20, 0, Math.PI * 2);
                 ctx.fill();
             }
-            cloudX = (cloudX + 0.5) % canvas.width; // Mueve las nubes
+            cloudX = (cloudX + 0.5) % canvas.width;
         }
 
         class RoadStripe {
@@ -308,7 +318,7 @@
                     ctx.drawImage(obstacleImg, this.x, this.y, this.width, this.height);
                 } else {
                     ctx.fillStyle = '#ff3333';
-                    ctx.fillRect(this.x, this.y, this.width, this.height); // Fallback
+                    ctx.fillRect(this.x, this.y, this.width, this.height);
                 }
             }
         }
@@ -379,8 +389,14 @@
                 if (this.y > canvas.height) this.baseY = horizonY;
             }
             draw() {
-                ctx.fillStyle = this.type === 'rock' ? '#8B4513' : '#228B22';
-                ctx.fillRect(this.x, this.y, this.width, this.height);
+                if (this.type === 'rock' && rockImg.complete) {
+                    ctx.drawImage(rockImg, this.x, this.y, this.width, this.height);
+                } else if (this.type === 'tree' && treeImg.complete) {
+                    ctx.drawImage(treeImg, this.x, this.y, this.width, this.height);
+                } else {
+                    ctx.fillStyle = this.type === 'rock' ? '#8B4513' : '#228B22';
+                    ctx.fillRect(this.x, this.y, this.width, this.height);
+                }
             }
         }
 
@@ -559,7 +575,7 @@
                 }
                 return;
             }
-            console.log('Game loop running, frame:', frameCount, 'lives:', lives); // Depuración
+            console.log('Game loop running, frame:', frameCount, 'lives:', lives);
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             drawBackground();
@@ -625,7 +641,7 @@
                     collisionSound.play().catch(e => console.log('Error al reproducir collisionSound:', e));
                     obstacles.splice(index, 1);
                     if (lives <= 0) gameOver = true;
-                    console.log('Colisión con obstáculo, vidas restantes:', lives); // Depuración
+                    console.log('Colisión con obstáculo, vidas restantes:', lives);
                 }
             });
             collectibles.forEach((collectible, index) => {
@@ -635,7 +651,7 @@
                     score += 50;
                     collectSound.play().catch(e => console.log('Error al reproducir collectSound:', e));
                     collectibles.splice(index, 1);
-                    console.log('Coleccionable recogido, score:', score); // Depuración
+                    console.log('Coleccionable recogido, score:', score);
                 }
                 if (collectible.y > canvas.height) collectibles.splice(index, 1);
             });
@@ -648,16 +664,16 @@
                     collisionSound.play().catch(e => console.log('Error al reproducir collisionSound:', e));
                     sideObjects.splice(index, 1);
                     if (lives <= 0) gameOver = true;
-                    console.log('Colisión con sideObject, vidas restantes:', lives); // Depuración
+                    console.log('Colisión con sideObject, vidas restantes:', lives);
                 }
                 if (obj.y > canvas.height) sideObjects.splice(index, 1);
             });
 
-            if (playerImg.complete || !playerImg.complete) { // Siempre intenta dibujar
+            if (playerImg.complete || !playerImg.complete) {
                 ctx.drawImage(playerImg, player.x, player.y, player.width, player.height);
             } else {
                 ctx.fillStyle = '#00f';
-                ctx.fillRect(player.x, player.y, player.width, player.height); // Fallback
+                ctx.fillRect(player.x, player.y, player.width, player.height);
             }
 
             score += 0.1;
@@ -667,4 +683,4 @@
         }
     </script>
 </body>
-</html>
+    </html>
