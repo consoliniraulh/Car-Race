@@ -197,15 +197,18 @@
 
         // Cargar sprites
         const playerImg = new Image();
-        playerImg.src = 'car.png'; // Reemplaza con la URL o ruta de tu imagen
-        const obstacleImg = new Image();
-        obstacleImg.src = 'obstacle.png'; // Reemplaza con la URL o ruta
-        const collectibleImg = new Image();
-        collectibleImg.src = 'collectible.png'; // Reemplaza con la URL o ruta
+        playerImg.src = 'car.png'; // Verifica que esta ruta sea correcta
+        playerImg.onload = () => console.log('Sprite del auto cargado');
+        playerImg.onerror = () => console.log('Error cargando car.png, usando fallback');
 
-        // Fallback si las imágenes no cargan
-        playerImg.onerror = () => console.log('Error cargando car.png');
+        const obstacleImg = new Image();
+        obstacleImg.src = 'obstacle.png';
+        obstacleImg.onload = () => console.log('Sprite del obstáculo cargado');
         obstacleImg.onerror = () => console.log('Error cargando obstacle.png');
+
+        const collectibleImg = new Image();
+        collectibleImg.src = 'collectible.png';
+        collectibleImg.onload = () => console.log('Sprite del coleccionable cargado');
         collectibleImg.onerror = () => console.log('Error cargando collectible.png');
 
         [collisionSound, collectSound, backgroundMusic].forEach(audio => {
@@ -220,7 +223,7 @@
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
 
-        const player = { x: canvas.width / 2, y: canvas.height - 60, width: 50, height: 30, speed: 4 }; // Ajustado para sprite
+        const player = { x: canvas.width / 2, y: canvas.height - 60, width: 50, height: 30, speed: 4 };
         let score = 0, lives = 3, gameOver = false, gameStarted = false, obstacles = [], collectibles = [], roadStripes = [], sideObjects = [], frameCount = 0;
         let roadSpeed = 3;
         const horizonY = canvas.height * 0.25;
@@ -238,7 +241,7 @@
                 ctx.arc(cloudX + i * 150 - frameCount * 0.1, 50, 20, 0, Math.PI * 2);
                 ctx.fill();
             }
-            cloudX = (cloudX + 0.5) % canvas.width;
+            cloudX = (cloudX + 0.5) % canvas.width; // Mueve las nubes
         }
 
         class RoadStripe {
@@ -421,7 +424,7 @@
                 highScoresButton.style.display = 'none';
                 highScoresDiv.style.display = 'none';
                 backgroundMusic.play().then(() => { backgroundMusic.muted = false; }).catch(e => console.log('Error play:', e));
-                gameLoop();
+                gameLoop(); // Asegurar inicio
             }
             touchStartX = e.touches[0].clientX;
         });
@@ -456,7 +459,7 @@
                 highScoresButton.style.display = 'none';
                 highScoresDiv.style.display = 'none';
                 backgroundMusic.play().then(() => { backgroundMusic.muted = false; console.log('Música iniciada'); }).catch(e => console.log('Error al iniciar música:', e));
-                gameLoop();
+                gameLoop(); // Asegurar inicio
             }
         });
 
@@ -556,6 +559,7 @@
                 }
                 return;
             }
+            console.log('Game loop running'); // Depuración
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             drawBackground();
@@ -646,7 +650,6 @@
                 if (obj.y > canvas.height) sideObjects.splice(index, 1);
             });
 
-            // Dibujar jugador con sprite
             if (playerImg.complete) {
                 ctx.drawImage(playerImg, player.x, player.y, player.width, player.height);
             } else {
