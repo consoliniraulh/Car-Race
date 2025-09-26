@@ -221,6 +221,17 @@
         treeImg.onload = () => console.log('Sprite del árbol cargado');
         treeImg.onerror = () => console.log('Error cargando tree.png');
 
+        // Cargar imágenes del fondo
+        const movingBackgroundImg = new Image();
+        movingBackgroundImg.src = 'moving_background.png';
+        movingBackgroundImg.onload = () => console.log('Fondo en movimiento cargado');
+        movingBackgroundImg.onerror = () => console.log('Error cargando moving_background.png');
+
+        const mountainImg = new Image();
+        mountainImg.src = 'mountain.png';
+        mountainImg.onload = () => console.log('Imagen de montaña cargada');
+        mountainImg.onerror = () => console.log('Error cargando mountain.png');
+
         [collisionSound, collectSound, backgroundMusic].forEach(audio => {
             audio.onerror = () => console.log(`Error cargando ${audio.id}`);
             audio.onloadeddata = () => console.log(`${audio.id} cargado correctamente`);
@@ -239,19 +250,38 @@
         const horizonY = canvas.height * 0.25;
         const vanishPointX = canvas.width / 2;
 
-        let cloudX = 0;
+        let movingBackgroundX = 0; // Posición X para la imagen en movimiento
+
         function drawBackground() {
-            ctx.fillStyle = '#87CEEB';
-            ctx.fillRect(0, 0, canvas.width, horizonY);
+            // Dibujar el fondo inferior (suelo)
             ctx.fillStyle = '#222';
-            ctx.fillRect(0, horizonY, canvas.width, canvas.height);
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-            for (let i = 0; i < 3; i++) {
-                ctx.beginPath();
-                ctx.arc(cloudX + i * 150 - frameCount * 0.1, 50, 20, 0, Math.PI * 2);
-                ctx.fill();
+            ctx.fillRect(0, horizonY, canvas.width, canvas.height - horizonY);
+
+            // Dibujar la imagen en movimiento (en bucle de izquierda a derecha)
+            if (movingBackgroundImg.complete) {
+                const imgWidth = movingBackgroundImg.width;
+                const imgHeight = horizonY;
+                ctx.drawImage(movingBackgroundImg, movingBackgroundX, 0, imgWidth, imgHeight);
+                ctx.drawImage(movingBackgroundImg, movingBackgroundX + imgWidth, 0, imgWidth, imgHeight);
+
+                movingBackgroundX += 0.5; // Velocidad del movimiento
+                if (movingBackgroundX >= imgWidth) {
+                    movingBackgroundX -= imgWidth; // Reinicia para el bucle
+                }
+            } else {
+                ctx.fillStyle = '#87CEEB';
+                ctx.fillRect(0, 0, canvas.width, horizonY);
             }
-            cloudX = (cloudX + 0.5) % canvas.width;
+
+            // Dibujar la montaña fija
+            if (mountainImg.complete) {
+                const mountainHeight = horizonY;
+                const mountainWidth = canvas.width;
+                ctx.drawImage(mountainImg, 0, 0, mountainWidth, mountainHeight);
+            } else {
+                ctx.fillStyle = 'rgba(139, 69, 19, 0.5)';
+                ctx.fillRect(0, horizonY - 50, canvas.width, 50);
+            }
         }
 
         class RoadStripe {
@@ -365,7 +395,7 @@
         class SideObject {
             constructor(type) {
                 this.type = type;
-                this.baseWidth = type === 'rock' ? 40 : 50; // Aumentado a 40x40 para rocas, 50x80 para árboles
+                this.baseWidth = type === 'rock' ? 40 : 50;
                 this.baseHeight = type === 'rock' ? 40 : 80;
                 this.targetX = type === 'rock' ? (Math.random() < 0.5 ? canvas.width * 0.1 : canvas.width * 0.9) : (Math.random() < 0.5 ? canvas.width * 0.15 : canvas.width * 0.85);
                 this.baseY = horizonY;
@@ -525,6 +555,7 @@
             sideObjects = [];
             frameCount = 0;
             roadSpeed = 3;
+            movingBackgroundX = 0; // Reiniciar la posición del fondo en movimiento
             scoreDisplay.textContent = `Puntaje: ${Math.floor(score)}`;
             livesDisplay.textContent = `Vidas: ${lives}`;
             startButton.style.display = 'block';
@@ -542,6 +573,7 @@
 
         function showHighScores() {
             highScoresDiv.style.display = 'block';
+            highScoresList.innerHTML = '';
             const highScores = JSON.parse(localStorage.getItem('highScores') || '[]');
             highScores.sort((a, b) => b.score - a.score).slice(0, 10).forEach((entry, index) => {
                 highScoresList.innerHTML += `${index + 1}. ${entry.name}: ${entry.score}<br>`;
@@ -683,4 +715,4 @@
         }
     </script>
 </body>
-</html>
+    </html>
