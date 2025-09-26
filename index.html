@@ -197,17 +197,17 @@
 
         // Cargar sprites
         const playerImg = new Image();
-        playerImg.src = 'car.png'; // Verifica que esta ruta sea correcta
+        playerImg.src = 'car.png'; // Imagen en la raíz
         playerImg.onload = () => console.log('Sprite del auto cargado');
         playerImg.onerror = () => console.log('Error cargando car.png, usando fallback');
 
         const obstacleImg = new Image();
-        obstacleImg.src = 'obstacle.png';
+        obstacleImg.src = 'obstacle.png'; // Asegúrate de tener esta imagen
         obstacleImg.onload = () => console.log('Sprite del obstáculo cargado');
         obstacleImg.onerror = () => console.log('Error cargando obstacle.png');
 
         const collectibleImg = new Image();
-        collectibleImg.src = 'collectible.png';
+        collectibleImg.src = 'collectible.png'; // Asegúrate de tener esta imagen
         collectibleImg.onload = () => console.log('Sprite del coleccionable cargado');
         collectibleImg.onerror = () => console.log('Error cargando collectible.png');
 
@@ -424,7 +424,7 @@
                 highScoresButton.style.display = 'none';
                 highScoresDiv.style.display = 'none';
                 backgroundMusic.play().then(() => { backgroundMusic.muted = false; }).catch(e => console.log('Error play:', e));
-                gameLoop(); // Asegurar inicio
+                gameLoop();
             }
             touchStartX = e.touches[0].clientX;
         });
@@ -459,7 +459,7 @@
                 highScoresButton.style.display = 'none';
                 highScoresDiv.style.display = 'none';
                 backgroundMusic.play().then(() => { backgroundMusic.muted = false; console.log('Música iniciada'); }).catch(e => console.log('Error al iniciar música:', e));
-                gameLoop(); // Asegurar inicio
+                gameLoop();
             }
         });
 
@@ -559,7 +559,7 @@
                 }
                 return;
             }
-            console.log('Game loop running'); // Depuración
+            console.log('Game loop running, frame:', frameCount, 'lives:', lives); // Depuración
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             drawBackground();
@@ -622,9 +622,10 @@
                 if (checkCollision(player, obstacle)) {
                     lives--;
                     livesDisplay.textContent = `Vidas: ${lives}`;
-                    collisionSound.play().catch(e => {});
+                    collisionSound.play().catch(e => console.log('Error al reproducir collisionSound:', e));
                     obstacles.splice(index, 1);
                     if (lives <= 0) gameOver = true;
+                    console.log('Colisión con obstáculo, vidas restantes:', lives); // Depuración
                 }
             });
             collectibles.forEach((collectible, index) => {
@@ -632,8 +633,9 @@
                 collectible.draw();
                 if (checkCollision(player, collectible)) {
                     score += 50;
-                    collectSound.play().catch(e => {});
+                    collectSound.play().catch(e => console.log('Error al reproducir collectSound:', e));
                     collectibles.splice(index, 1);
+                    console.log('Coleccionable recogido, score:', score); // Depuración
                 }
                 if (collectible.y > canvas.height) collectibles.splice(index, 1);
             });
@@ -643,14 +645,15 @@
                 if (checkCollision(player, obj)) {
                     lives--;
                     livesDisplay.textContent = `Vidas: ${lives}`;
-                    collisionSound.play().catch(e => {});
+                    collisionSound.play().catch(e => console.log('Error al reproducir collisionSound:', e));
                     sideObjects.splice(index, 1);
                     if (lives <= 0) gameOver = true;
+                    console.log('Colisión con sideObject, vidas restantes:', lives); // Depuración
                 }
                 if (obj.y > canvas.height) sideObjects.splice(index, 1);
             });
 
-            if (playerImg.complete) {
+            if (playerImg.complete || !playerImg.complete) { // Siempre intenta dibujar
                 ctx.drawImage(playerImg, player.x, player.y, player.width, player.height);
             } else {
                 ctx.fillStyle = '#00f';
