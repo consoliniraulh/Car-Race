@@ -365,8 +365,8 @@
         class SideObject {
             constructor(type) {
                 this.type = type;
-                this.baseWidth = type === 'rock' ? 20 : 25;
-                this.baseHeight = type === 'rock' ? 20 : 40;
+                this.baseWidth = type === 'rock' ? 40 : 50; // Aumentado a 40x40 para rocas, 50x80 para árboles
+                this.baseHeight = type === 'rock' ? 40 : 80;
                 this.targetX = type === 'rock' ? (Math.random() < 0.5 ? canvas.width * 0.1 : canvas.width * 0.9) : (Math.random() < 0.5 ? canvas.width * 0.15 : canvas.width * 0.85);
                 this.baseY = horizonY;
                 this.x = vanishPointX;
@@ -683,4 +683,4 @@
         }
     </script>
 </body>
-    </html>
+</html>
