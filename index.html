@@ -35,7 +35,14 @@
             color: white;
             font-size: 20px;
         }
-        #startButton, #leftButton, #rightButton {
+        #lives {
+            position: absolute;
+            top: 40px;
+            left: 10px;
+            color: white;
+            font-size: 20px;
+        }
+        #startButton, #highScoresButton, #restartButton, #exitButton, #leftButton, #rightButton, #playAgainButton {
             position: absolute;
             padding: 10px;
             font-size: 16px;
@@ -44,20 +51,84 @@
             background-color: rgba(0, 0, 0, 0.5);
             color: white;
             border: none;
-            border-radius: 50%;
+            border-radius: 5px;
         }
         #startButton { top: 10px; right: 10px; }
+        #highScoresButton { top: 50px; right: 10px; }
+        #restartButton { top: 60px; right: 10px; display: none; }
+        #exitButton { top: 100px; right: 10px; display: none; }
         #leftButton { bottom: 20px; left: 20px; width: 80px; height: 80px; }
         #rightButton { bottom: 20px; right: 20px; width: 80px; height: 80px; }
+        #highScores {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 20px;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+            z-index: 11;
+            text-align: center;
+        }
+        #highScoresExit {
+            margin-top: 10px;
+            padding: 5px 10px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        #nameInput {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            color: white;
+        }
+        #nameInput input {
+            padding: 5px;
+            font-size: 16px;
+            color: black;
+        }
+        #nameInput button {
+            padding: 5px 10px;
+            font-size: 16px;
+            margin-left: 10px;
+        }
+        #playAgainButton {
+            top: 60%;
+            left: 50%;
+            transform: translateX(-50%);
+            display: none;
+            z-index: 11;
+        }
     </style>
 </head>
 <body>
     <div id="score">Puntaje: 0</div>
+    <div id="lives">Vidas: 3</div>
     <div id="gameOver">¡Game Over!</div>
-    <button id="startButton">Iniciar Juego (Touch para empezar)</button>
+    <button id="startButton">INICIO</button>
+    <button id="highScoresButton">Puntuaciones</button>
+    <button id="restartButton">REINICIAR</button>
+    <button id="exitButton">SALIR</button>
     <button id="leftButton">←</button>
     <button id="rightButton">→</button>
     <canvas id="gameCanvas" width="400" height="600"></canvas>
+    <div id="highScores">Puntuaciones más altas:<br><span id="highScoresList"></span><br><button id="highScoresExit">Salir</button></div>
+    <div id="nameInput">
+        ¡Nueva puntuación alta! Ingresa tu nombre:<br>
+        <input type="text" id="playerName" maxlength="20">
+        <button onclick="saveScore()">Guardar</button>
+    </div>
+    <button id="playAgainButton">Volver a jugar</button>
 
     <audio id="collisionSound">
         <source src="sounds/collision.mp3" type="audio/mpeg">
@@ -76,10 +147,20 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const scoreDisplay = document.getElementById('score');
+        const livesDisplay = document.getElementById('lives');
         const gameOverDisplay = document.getElementById('gameOver');
         const startButton = document.getElementById('startButton');
+        const highScoresButton = document.getElementById('highScoresButton');
+        const restartButton = document.getElementById('restartButton');
+        const exitButton = document.getElementById('exitButton');
         const leftButton = document.getElementById('leftButton');
         const rightButton = document.getElementById('rightButton');
+        const highScoresDiv = document.getElementById('highScores');
+        const highScoresList = document.getElementById('highScoresList');
+        const nameInputDiv = document.getElementById('nameInput');
+        const playerNameInput = document.getElementById('playerName');
+        const playAgainButton = document.getElementById('playAgainButton');
+        const highScoresExitButton = document.getElementById('highScoresExit'); // Nuevo botón
 
         const collisionSound = document.getElementById('collisionSound');
         const collectSound = document.getElementById('collectSound');
@@ -98,59 +179,71 @@
         resizeCanvas();
 
         const player = { x: canvas.width / 2, y: canvas.height - 60, width: 30, height: 50, speed: 4 };
-        let score = 0, gameOver = false, gameStarted = false, obstacles = [], collectibles = [], roadLines = [], frameCount = 0;
-        const roadSpeed = 3;
-        const horizonY = canvas.height * 0.75; // Horizonte a 3/4 de la pantalla
-        const vanishPointX = canvas.width / 2; // Punto de fuga en el centro horizontal
+        let score = 0, lives = 3, gameOver = false, gameStarted = false, obstacles = [], collectibles = [], roadStripes = [], sideObjects = [], frameCount = 0;
+        let roadSpeed = 3;
+        const horizonY = canvas.height * 0.25;
+        const vanishPointX = canvas.width / 2;
 
-        // Clase RoadLine con perspectiva
-        class RoadLine {
-            constructor(y) {
-                this.baseY = y; // Posición inicial relativa al horizonte
-                this.width = 8;
-                this.height = 40;
+        // Clase RoadStripe (solo central)
+        class RoadStripe {
+            constructor() {
+                this.baseWidth = 10;
+                this.baseHeight = 20;
+                this.y = horizonY;
                 this.speed = roadSpeed;
-                this.updatePosition(); // Calcula x e y iniciales
+                this.updatePosition();
             }
             updatePosition() {
-                const distanceFromHorizon = this.baseY - horizonY;
-                const scale = Math.max(0.1, 1 - distanceFromHorizon / (canvas.height - horizonY)); // Escala hacia el punto de fuga
-                this.x = vanishPointX - (this.width / 2) * scale;
-                this.y = this.baseY + distanceFromHorizon * scale;
-                this.height = 40 * scale;
+                const distanceFromHorizon = this.y - horizonY;
+                const totalDistance = canvas.height - horizonY;
+                const progress = distanceFromHorizon / totalDistance;
+                const scale = Math.max(0.1, progress);
+                this.width = this.baseWidth * scale;
+                this.height = this.baseHeight * (1 + 2 * progress);
+                this.x = vanishPointX - this.width / 2;
             }
             update() {
-                this.baseY += this.speed;
-                if (this.baseY > canvas.height) this.baseY = horizonY - (canvas.height - this.baseY); // Reinicia desde el horizonte
+                this.y += this.speed;
+                if (this.y > canvas.height) this.y = horizonY;
                 this.updatePosition();
             }
             draw() {
-                ctx.fillStyle = 'white';
-                ctx.fillRect(this.x, this.y, this.width, this.height);
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                const segmentHeight = this.height / 2;
+                for (let i = 0; i < 2; i++) {
+                    ctx.fillStyle = i % 2 === 0 ? 'white' : 'gray';
+                    ctx.fillRect(0, -i * segmentHeight, this.width, segmentHeight);
+                }
+                ctx.restore();
             }
         }
 
-        // Clase Obstacle con perspectiva
+        // Clase Obstacle
         class Obstacle {
             constructor() {
                 this.baseWidth = 30;
                 this.baseHeight = 30;
-                this.x = Math.random() * (canvas.width - this.baseWidth);
-                this.baseY = horizonY - 100; // Empiezan cerca del horizonte
+                this.targetX = canvas.width * 0.2 + Math.random() * (canvas.width * 0.6);
+                this.baseY = horizonY;
+                this.x = vanishPointX;
                 this.speed = roadSpeed;
                 this.updatePosition();
             }
             updatePosition() {
                 const distanceFromHorizon = this.baseY - horizonY;
-                const scale = Math.max(0.1, 1 - distanceFromHorizon / (canvas.height - horizonY));
+                const totalDistance = canvas.height - horizonY;
+                const progress = distanceFromHorizon / totalDistance;
+                this.x = vanishPointX + (this.targetX - vanishPointX) * progress;
+                const scale = Math.max(0.1, progress);
                 this.width = this.baseWidth * scale;
                 this.height = this.baseHeight * scale;
-                this.y = this.baseY + distanceFromHorizon * scale;
+                this.y = this.baseY;
             }
             update() {
                 this.baseY += this.speed;
                 this.updatePosition();
-                if (this.y > canvas.height) this.baseY = horizonY - 100; // Reinicia
+                if (this.y > canvas.height) this.baseY = horizonY;
             }
             draw() {
                 ctx.fillStyle = 'red';
@@ -158,27 +251,31 @@
             }
         }
 
-        // Clase Collectible con perspectiva
+        // Clase Collectible
         class Collectible {
             constructor() {
                 this.baseWidth = 20;
                 this.baseHeight = 20;
-                this.x = Math.random() * (canvas.width - this.baseWidth);
-                this.baseY = horizonY - 100;
+                this.targetX = canvas.width * 0.2 + Math.random() * (canvas.width * 0.6);
+                this.baseY = horizonY;
+                this.x = vanishPointX;
                 this.speed = roadSpeed;
                 this.updatePosition();
             }
             updatePosition() {
                 const distanceFromHorizon = this.baseY - horizonY;
-                const scale = Math.max(0.1, 1 - distanceFromHorizon / (canvas.height - horizonY));
+                const totalDistance = canvas.height - horizonY;
+                const progress = distanceFromHorizon / totalDistance;
+                this.x = vanishPointX + (this.targetX - vanishPointX) * progress;
+                const scale = Math.max(0.1, progress);
                 this.width = this.baseWidth * scale;
                 this.height = this.baseHeight * scale;
-                this.y = this.baseY + distanceFromHorizon * scale;
+                this.y = this.baseY;
             }
             update() {
                 this.baseY += this.speed;
                 this.updatePosition();
-                if (this.y > canvas.height) this.baseY = horizonY - 100;
+                if (this.y > canvas.height) this.baseY = horizonY;
             }
             draw() {
                 ctx.fillStyle = 'yellow';
@@ -188,7 +285,41 @@
             }
         }
 
-        for (let i = 0; i < 8; i++) roadLines.push(new RoadLine(horizonY + i * 50)); // Inicia las líneas debajo del horizonte
+        // Clase SideObject (piedra o árbol)
+        class SideObject {
+            constructor(type) {
+                this.type = type;
+                this.baseWidth = type === 'rock' ? 20 : 25;
+                this.baseHeight = type === 'rock' ? 20 : 40;
+                this.targetX = type === 'rock' ? (Math.random() < 0.5 ? canvas.width * 0.1 : canvas.width * 0.9) : (Math.random() < 0.5 ? canvas.width * 0.15 : canvas.width * 0.85);
+                this.baseY = horizonY;
+                this.x = vanishPointX;
+                this.speed = roadSpeed;
+                this.updatePosition();
+            }
+            updatePosition() {
+                const distanceFromHorizon = this.baseY - horizonY;
+                const totalDistance = canvas.height - horizonY;
+                const progress = distanceFromHorizon / totalDistance;
+                this.x = vanishPointX + (this.targetX - vanishPointX) * progress;
+                const scale = Math.max(0.1, progress);
+                this.width = this.baseWidth * scale;
+                this.height = this.baseHeight * scale;
+                this.y = this.baseY;
+            }
+            update() {
+                this.baseY += this.speed;
+                this.updatePosition();
+                if (this.y > canvas.height) this.baseY = horizonY;
+            }
+            draw() {
+                ctx.fillStyle = this.type === 'rock' ? 'brown' : 'darkgreen';
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+            }
+        }
+
+        // Inicialización
+        roadStripes.push(new RoadStripe());
 
         let moveInterval = null;
 
@@ -225,6 +356,8 @@
             if (!gameStarted) {
                 gameStarted = true;
                 startButton.style.display = 'none';
+                highScoresButton.style.display = 'none';
+                highScoresDiv.style.display = 'none';
                 backgroundMusic.play().then(() => { backgroundMusic.muted = false; }).catch(e => console.log('Error play:', e));
                 gameLoop();
             }
@@ -258,10 +391,66 @@
             if (!gameStarted) {
                 gameStarted = true;
                 startButton.style.display = 'none';
+                highScoresButton.style.display = 'none';
+                highScoresDiv.style.display = 'none';
                 backgroundMusic.play().then(() => { backgroundMusic.muted = false; console.log('Música iniciada'); }).catch(e => console.log('Error al iniciar música:', e));
                 gameLoop();
             }
         });
+
+        highScoresButton.addEventListener('click', () => {
+            highScoresDiv.style.display = 'block';
+            highScoresList.innerHTML = '';
+            const highScores = JSON.parse(localStorage.getItem('highScores') || '[]');
+            highScores.sort((a, b) => b.score - a.score).slice(0, 10).forEach((entry, index) => {
+                highScoresList.innerHTML += `${index + 1}. ${entry.name}: ${entry.score}<br>`;
+            });
+        });
+
+        restartButton.addEventListener('click', () => {
+            resetGame();
+            gameOverDisplay.style.display = 'none';
+            restartButton.style.display = 'none';
+            exitButton.style.display = 'none';
+            gameLoop();
+        });
+
+        exitButton.addEventListener('click', () => {
+            gameOverDisplay.style.display = 'none';
+            restartButton.style.display = 'none';
+            exitButton.style.display = 'none';
+            showHighScores();
+        });
+
+        playAgainButton.addEventListener('click', () => {
+            resetGame();
+            highScoresDiv.style.display = 'none';
+            playAgainButton.style.display = 'none';
+            gameLoop();
+        });
+
+        highScoresExitButton.addEventListener('click', () => {
+            highScoresDiv.style.display = 'none';
+        });
+
+        function resetGame() {
+            score = 0;
+            lives = 3;
+            gameOver = false;
+            gameStarted = false;
+            obstacles = [];
+            collectibles = [];
+            roadStripes = [new RoadStripe()];
+            sideObjects = [];
+            frameCount = 0;
+            roadSpeed = 3;
+            scoreDisplay.textContent = `Puntaje: ${Math.floor(score)}`;
+            livesDisplay.textContent = `Vidas: ${lives}`;
+            startButton.style.display = 'block';
+            highScoresButton.style.display = 'block';
+            nameInputDiv.style.display = 'none';
+            highScoresDiv.style.display = 'none';
+        }
 
         function checkCollision(rect1, rect2) {
             return rect1.x < rect2.x + rect2.width &&
@@ -270,23 +459,72 @@
                    rect1.y + rect1.height > rect2.y;
         }
 
+        function showHighScores() {
+            highScoresDiv.style.display = 'block';
+            const highScores = JSON.parse(localStorage.getItem('highScores') || '[]');
+            highScores.sort((a, b) => b.score - a.score).slice(0, 10).forEach((entry, index) => {
+                highScoresList.innerHTML += `${index + 1}. ${entry.name}: ${entry.score}<br>`;
+            });
+            if (highScores.length < 10 || score > (highScores[highScores.length - 1]?.score || 0)) {
+                nameInputDiv.style.display = 'block';
+            }
+        }
+
+        window.saveScore = function() {
+            const name = playerNameInput.value.trim() || 'Anónimo';
+            let highScores = JSON.parse(localStorage.getItem('highScores') || '[]');
+            highScores.push({ name, score });
+            highScores.sort((a, b) => b.score - a.score);
+            localStorage.setItem('highScores', JSON.stringify(highScores.slice(0, 10)));
+            
+            // Volver a la pantalla de inicio
+            nameInputDiv.style.display = 'none';
+            highScoresDiv.style.display = 'none';
+            startButton.style.display = 'block';
+            highScoresButton.style.display = 'block';
+            playAgainButton.style.display = 'none';
+        };
+
         function gameLoop() {
             if (!gameStarted || gameOver) {
                 if (gameOver) {
                     gameOverDisplay.style.display = 'block';
+                    restartButton.style.display = 'block';
+                    exitButton.style.display = 'block';
                     backgroundMusic.pause();
                 }
                 return;
             }
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Dibujar carretera con perspectiva
+            // Dibujar cielo celeste sobre el horizonte
+            ctx.fillStyle = 'lightblue';
+            ctx.fillRect(0, 0, canvas.width, horizonY);
+
+            // Dibujar carretera con bordes verdes claros en perspectiva
             ctx.fillStyle = 'gray';
             ctx.beginPath();
-            ctx.moveTo(0, horizonY);
+            ctx.moveTo(canvas.width * 0.2, canvas.height);
+            ctx.lineTo(canvas.width * 0.8, canvas.height);
+            ctx.lineTo(canvas.width / 2, horizonY);
+            ctx.lineTo(canvas.width / 2, horizonY);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.fillStyle = 'lightgreen';
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height);
+            ctx.lineTo(canvas.width * 0.2, canvas.height);
+            ctx.lineTo(canvas.width / 2, horizonY);
+            ctx.lineTo(0, horizonY);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.moveTo(canvas.width, canvas.height);
+            ctx.lineTo(canvas.width * 0.8, canvas.height);
+            ctx.lineTo(canvas.width / 2, horizonY);
             ctx.lineTo(canvas.width, horizonY);
-            ctx.lineTo(canvas.width * 0.75, canvas.height);
-            ctx.lineTo(canvas.width * 0.25, canvas.height);
             ctx.closePath();
             ctx.fill();
 
@@ -297,19 +535,36 @@
             ctx.lineTo(canvas.width, horizonY);
             ctx.stroke();
 
-            roadLines.forEach(line => { line.update(); line.draw(); });
+            roadStripes.forEach(stripe => { stripe.update(); stripe.draw(); });
             if (frameCount % 100 === 0) {
-                if (Math.random() < 0.5) obstacles.push(new Obstacle());
-                if (Math.random() < 0.2) collectibles.push(new Collectible());
+                const baseObstacleChance = 0.2;
+                const obstacleIncrease = Math.floor(score / 1000) * 0.1;
+                if (Math.random() < baseObstacleChance + obstacleIncrease) obstacles.push(new Obstacle());
+
+                const baseCollectibleChance = 0.2;
+                const collectibleIncrease = Math.floor(score / 1000) * 0.05;
+                if (Math.random() < baseCollectibleChance + collectibleIncrease) collectibles.push(new Collectible());
+
+                if (Math.random() < 0.2) sideObjects.push(new SideObject(Math.random() < 0.5 ? 'rock' : 'tree'));
+                if (roadStripes.length < 5) roadStripes.push(new RoadStripe());
             }
+
+            if (score >= 500 && score % 500 === 0) roadSpeed += 0.5;
+            roadStripes.forEach(stripe => stripe.speed = roadSpeed);
+            obstacles.forEach(obstacle => obstacle.speed = roadSpeed);
+            collectibles.forEach(collectible => collectible.speed = roadSpeed);
+            sideObjects.forEach(obj => obj.speed = roadSpeed);
+
             obstacles.forEach((obstacle, index) => {
                 obstacle.update();
                 obstacle.draw();
                 if (checkCollision(player, obstacle)) {
-                    gameOver = true;
+                    lives--;
+                    livesDisplay.textContent = `Vidas: ${lives}`;
                     collisionSound.play().catch(e => {});
+                    obstacles.splice(index, 1);
+                    if (lives <= 0) gameOver = true;
                 }
-                if (obstacle.y > canvas.height) obstacles.splice(index, 1);
             });
             collectibles.forEach((collectible, index) => {
                 collectible.update();
@@ -321,6 +576,19 @@
                 }
                 if (collectible.y > canvas.height) collectibles.splice(index, 1);
             });
+            sideObjects.forEach((obj, index) => {
+                obj.update();
+                obj.draw();
+                if (checkCollision(player, obj)) {
+                    lives--;
+                    livesDisplay.textContent = `Vidas: ${lives}`;
+                    collisionSound.play().catch(e => {});
+                    sideObjects.splice(index, 1);
+                    if (lives <= 0) gameOver = true;
+                }
+                if (obj.y > canvas.height) sideObjects.splice(index, 1);
+            });
+
             ctx.fillStyle = 'blue';
             ctx.fillRect(player.x, player.y, player.width, player.height);
             score += 0.1;
