@@ -197,7 +197,7 @@
 
         // Cargar sprites
         const playerImg = new Image();
-        playerImg.src = 'car.png';
+        playerImg.src = 'Car.png';
         playerImg.onload = () => console.log('Sprite del auto cargado');
         playerImg.onerror = () => console.log('Error cargando car.png, usando fallback');
 
@@ -244,7 +244,7 @@
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
 
-        const player = { x: canvas.width / 2 - 25, y: canvas.height - 60, width: 50, height: 50, speed: 4 };
+        const player = { x: canvas.width / 2 - 25, y: canvas.height - 60, width: 50, height: 30, speed: 4 };
         let score = 0, lives = 3, gameOver = false, gameStarted = false, obstacles = [], collectibles = [], roadStripes = [], sideObjects = [], frameCount = 0;
         let roadSpeed = 3;
         const horizonY = canvas.height * 0.25;
@@ -322,7 +322,7 @@
         class Obstacle {
             constructor() {
                 this.baseWidth = 50;
-                this.baseHeight = 50;
+                this.baseHeight = 30;
                 this.targetX = canvas.width * 0.2 + Math.random() * (canvas.width * 0.6);
                 this.baseY = horizonY;
                 this.x = vanishPointX;
