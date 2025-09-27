@@ -323,7 +323,7 @@
             constructor() {
                 this.baseWidth = 50;
                 this.baseHeight = 30;
-                this.targetX = canvas.width * 0.2 + Math.random() * (canvas.width * 0.6);
+                this.targetX = canvas.width * 0.3 + Math.random() * (canvas.width * 0.6);
                 this.baseY = horizonY;
                 this.x = vanishPointX;
                 this.speed = roadSpeed;
@@ -398,7 +398,7 @@
                 this.type = type;
                 this.baseWidth = type === 'rock' ? 40 : 50;
                 this.baseHeight = type === 'rock' ? 40 : 80;
-                this.targetX = type === 'rock' ? (Math.random() < 0.5 ? canvas.width * 0.1 : canvas.width * 0.9) : (Math.random() < 0.5 ? canvas.width * 0.15 : canvas.width * 0.85);
+                this.targetX = type === 'rock' ? (Math.random() < 0.9 ? canvas.width * 0.1 : canvas.width * 0.9) : (Math.random() < 0.9 ? canvas.width * 0.15 : canvas.width * 0.85);
                 this.baseY = horizonY;
                 this.x = vanishPointX;
                 this.speed = roadSpeed;
