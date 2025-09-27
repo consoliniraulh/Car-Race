@@ -672,7 +672,7 @@
 
             // Generación de entidades cada X frames (controlada por frameCount)
             if (frameCount % 100 === 0) {
-                const baseObstacleChance = 0.2;
+                const baseObstacleChance = 0.5;
                 const obstacleIncrease = Math.floor(score / 1000) * 0.1;
                 if (Math.random() < baseObstacleChance + obstacleIncrease) obstacles.push(new Obstacle());
 
